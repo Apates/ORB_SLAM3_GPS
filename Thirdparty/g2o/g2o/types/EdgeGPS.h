@@ -1,6 +1,6 @@
 #pragma once
-#include <g2o/core/base_unary_edge.h>
-#include <g2o/types/slam3d/types_six_dof_expmap.h> // VertexSE3Expmap
+#include "types_six_dof_expmap.h" // VertexSE3Expmap
+#include "../core/base_unary_edge.h"
 #include <Eigen/Core>
 
 using namespace g2o;
