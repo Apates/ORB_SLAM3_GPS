@@ -536,7 +536,18 @@ public:
         cout << "Point distribution in KeyFrame: left-> " << left << " --- right-> " << right << endl;
     }
 
+    //Fields used for GPS pose optimization
+public:
+    bool bHasGPS = false;
+    Eigen::Vector3d mGPSPositionENU = Eigen::Vector3d::Zero();
+    Eigen::Matrix3d mGPSInformation = Eigen::Matrix3d::Identity(); // info matrix (inverse covariance)
 
+    inline bool HasGPS() const { return bHasGPS; }
+    inline void SetGPS(const Eigen::Vector3d &posENU, const Eigen::Matrix3d &info) {
+        mGPSPositionENU = posENU;
+        mGPSInformation = info;
+        bHasGPS = true;
+    }
 };
 
 } //namespace ORB_SLAM
