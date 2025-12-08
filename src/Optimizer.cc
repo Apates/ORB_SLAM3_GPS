@@ -40,6 +40,7 @@
 #include<mutex>
 
 #include "OptimizableTypes.h"
+#include "Thirdparty/g2o/g2o/types/EdgeGPS.h"
 
 
 namespace ORB_SLAM3
@@ -271,6 +272,22 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
         else
         {
             vbNotIncludedMP[i]=false;
+        }
+    }
+
+    // after adding pose vertices and point vertices, before optimize call:
+    for (KeyFrame* pKF : vpKFs) {
+        if (pKF->HasGPS()) {
+            EdgeGPS* e = new EdgeGPS();
+            e->setVertex(0, optimizer.vertex(pKF->mnId)); // vertex index from earlier mapping
+            e->setMeasurement(pKF->mGPSPositionENU);
+            e->setInformation(pKF->mGPSInformation);
+            // optionally set robust kernel if you like:
+            g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
+            rk->setDelta(1.0);
+            e->setRobustKernel(rk);
+
+            optimizer.addEdge(e);
         }
     }
 
