@@ -33,13 +33,13 @@ void LoadImages(const string &strSequence, vector<string> &vstrImageFilenames,
 
 int main(int argc, char **argv)
 {
-    if(argc != 4)
+    if(argc != 5)
     {
-        cerr << endl << "Usage: ./mono_kitti path_to_vocabulary path_to_settings path_to_sequence" << endl;
+        cerr << endl << "Usage: ./mono_gps path_to_vocabulary path_to_settings path_to_sequence path_to_srt" << endl;
         return 1;
     }
 
-    std::cout << "Starting modified version 0.1..." << endl;
+    std::cout << "Starting mono_gps version 0.1..." << endl;
 
     // Retrieve paths to images
     vector<string> vstrImageFilenames;
@@ -52,7 +52,15 @@ int main(int argc, char **argv)
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     std::cout << "Creating Slam system " << endl;
-    ORB_SLAM3::System SLAM(argv[1],argv[2],ORB_SLAM3::System::MONOCULAR,true);
+    std::string gpsSRTFile = argv[4];
+    ORB_SLAM3::System SLAM(
+        argv[1],
+        argv[2],
+        ORB_SLAM3::System::MONOCULAR,
+        true,
+        0,
+        "",
+        gpsSRTFile);
     std::cout << "Finished creating Slam system " << endl;
     float imageScale = SLAM.GetImageScale();
 

@@ -125,6 +125,17 @@ void LocalMapping::Run()
             {
                 if(mpAtlas->KeyFramesInMap()>2)
                 {
+                    static int gps_ba_counter = 0;
+
+                    if (++gps_ba_counter % 20 == 0)  // every 20 KFs
+                    {
+                        if (mpTracker->mpGPS)
+                        {
+                            std::cout << "[GPS] Triggering Global BA" << std::endl;
+                            Optimizer::GlobalBundleAdjustemnt(mpAtlas->GetCurrentMap(), 10);
+                        }
+                    }
+
 
                     if(mbInertial && mpCurrentKeyFrame->GetMap()->isImuInitialized())
                     {

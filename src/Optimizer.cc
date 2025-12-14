@@ -19,7 +19,7 @@
 
 #include "Optimizer.h"
 
-
+#include <iostream>
 #include <complex>
 
 #include <Eigen/StdVector>
@@ -275,6 +275,7 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
         }
     }
 
+    std::cout << "Optimizing GPS Edges" << endl;
     // after adding pose vertices and point vertices, before optimize call:
     for (KeyFrame* pKF : vpKFs) {
         if (pKF->HasGPS()) {

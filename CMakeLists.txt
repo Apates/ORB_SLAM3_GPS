@@ -7,8 +7,8 @@ ENDIF()
 
 MESSAGE("Build type: " ${CMAKE_BUILD_TYPE})
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall   -O3")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall   -O3")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -w   -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w   -O3")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -march=native")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 
@@ -111,7 +111,12 @@ include/GeometricTools.h
 include/TwoViewReconstruction.h
 include/SerializationUtils.h
 include/Config.h
-include/Settings.h)
+include/Settings.h
+        include/GPS/GPSUtils.h
+        src/GPS/GPSUtils.cpp
+        src/GPS/GPSManager.cpp
+        include/GPS/GPSManager.h
+        Examples/Monocular/mono_gps.cc)
 
 add_subdirectory(Thirdparty/g2o)
 
@@ -137,6 +142,15 @@ endif()
 
 
 # Build examples
+
+# GPS-Examples
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular)
+add_executable(mono_gps
+        Examples/Monocular/mono_gps.cc)
+
+target_link_libraries(mono_gps
+        ${PROJECT_NAME})
 
 # RGB-D examples
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/RGB-D)

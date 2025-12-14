@@ -41,7 +41,7 @@ namespace ORB_SLAM3
 {
 
 
-Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Atlas *pAtlas, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, Settings* settings, const string &_nameSeq):
+Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Atlas *pAtlas, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, Settings* settings, const string &strGPSFile, const string &_nameSeq):
     mState(NO_IMAGES_YET), mSensor(sensor), mTrackedFr(0), mbStep(false),
     mbOnlyTracking(false), mbMapUpdated(false), mbVO(false), mpORBVocabulary(pVoc), mpKeyFrameDB(pKFDB),
     mbReadyToInitializate(false), mpSystem(pSys), mpViewer(NULL), bStepByStep(false),
@@ -97,6 +97,10 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     initID = 0; lastID = 0;
     mbInitWith3KFs = false;
     mnNumDataset = 0;
+
+    mpGPS.reset(new GPSManager());
+    mpGPS->LoadFromSRT(strGPSFile);
+
 
     vector<GeometricCamera*> vpCams = mpAtlas->GetAllCameras();
     std::cout << "There are " << vpCams.size() << " cameras in the atlas" << std::endl;
@@ -3222,6 +3226,34 @@ void Tracking::CreateNewKeyFrame()
         return;
 
     KeyFrame* pKF = new KeyFrame(mCurrentFrame,mpAtlas->GetCurrentMap(),mpKeyFrameDB);
+
+    if (mpGPS)
+    {
+        Eigen::Vector3d gps_enu;
+        double t = mCurrentFrame.mTimeStamp;
+
+        // Query GPS aligned to this keyframe time
+        if (mpGPS->GetENUAtTime(t, gps_enu))
+        {
+            // --- GPS covariance (soft constraint) ---
+            double sigma_xy = 3.0;  // meters (tune!)
+            double sigma_z  = 6.0;  // meters
+
+            Eigen::Matrix3d cov = Eigen::Matrix3d::Zero();
+            cov(0,0) = sigma_xy * sigma_xy;
+            cov(1,1) = sigma_xy * sigma_xy;
+            cov(2,2) = sigma_z  * sigma_z;
+
+            Eigen::Matrix3d info = cov.inverse();
+
+            pKF->SetGPS(gps_enu, info);
+
+            /*std::cout << "[Tracking] GPS attached to KF "
+                      << pKF->mnId
+                      << " ENU = " << gps_enu.transpose()
+                      << std::endl;*/
+        }
+    }
 
     if(mpAtlas->isImuInitialized()) //  || mpLocalMapper->IsInitializing())
         pKF->bImu = true;
