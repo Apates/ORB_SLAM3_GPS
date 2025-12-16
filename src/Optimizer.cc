@@ -127,6 +127,19 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
         optimizer.addVertex(vSE3);
         if(pKF->mnId>maxKFid)
             maxKFid=pKF->mnId;
+
+        if (pKF->HasGPS()) {
+            EdgeGPS* e = new EdgeGPS();
+            e->setVertex(0, vSE3); // vertex index from earlier mapping
+            e->setMeasurement(pKF->mGPSPositionENU);
+            e->setInformation(pKF->mGPSInformation);
+            // optionally set robust kernel if you like:
+            g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
+            rk->setDelta(10.0);
+            //e->setRobustKernel(rk);
+
+            optimizer.addEdge(e);
+        }
     }
 
     const float thHuber2D = sqrt(5.99);
@@ -272,23 +285,6 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
         else
         {
             vbNotIncludedMP[i]=false;
-        }
-    }
-
-    std::cout << "Optimizing GPS Edges" << endl;
-    // after adding pose vertices and point vertices, before optimize call:
-    for (KeyFrame* pKF : vpKFs) {
-        if (pKF->HasGPS()) {
-            EdgeGPS* e = new EdgeGPS();
-            e->setVertex(0, optimizer.vertex(pKF->mnId)); // vertex index from earlier mapping
-            e->setMeasurement(pKF->mGPSPositionENU);
-            e->setInformation(pKF->mGPSInformation);
-            // optionally set robust kernel if you like:
-            g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
-            rk->setDelta(1.0);
-            e->setRobustKernel(rk);
-
-            optimizer.addEdge(e);
         }
     }
 

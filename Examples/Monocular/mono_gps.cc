@@ -39,7 +39,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    std::cout << "Starting mono_gps version 0.1..." << endl;
+    std::cout << "Starting mono_gps version 0.2..." << endl;
 
     // Retrieve paths to images
     vector<string> vstrImageFilenames;

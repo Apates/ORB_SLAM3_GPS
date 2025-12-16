@@ -3235,9 +3235,11 @@ void Tracking::CreateNewKeyFrame()
         // Query GPS aligned to this keyframe time
         if (mpGPS->GetENUAtTime(t, gps_enu))
         {
+            std::cout << "Timestamp: " << std::fixed << std::setprecision(4) << t << ", ENU: (" << gps_enu[0] <<", " << gps_enu[1] << ", " << gps_enu[2] << ")" << std::endl;
+
             // --- GPS covariance (soft constraint) ---
-            double sigma_xy = 3.0;  // meters (tune!)
-            double sigma_z  = 6.0;  // meters
+            double sigma_xy = 0.5;  // meters
+            double sigma_z  = 1.0;  // meters
 
             Eigen::Matrix3d cov = Eigen::Matrix3d::Zero();
             cov(0,0) = sigma_xy * sigma_xy;
