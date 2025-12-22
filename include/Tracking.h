@@ -42,7 +42,7 @@
 #include <mutex>
 #include <unordered_set>
 
-#include "GPS/GPSManager.h"
+#include "GPS/MetadataManager.h"
 
 namespace ORB_SLAM3
 {
@@ -137,7 +137,7 @@ public:
     int mSensor;
 
     //GPS Manager
-    std::unique_ptr<GPSManager> mpGPS;
+    std::unique_ptr<MetadataManager> mpGPS;
 
     // Current Frame
     Frame mCurrentFrame;

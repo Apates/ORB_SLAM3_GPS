@@ -41,6 +41,7 @@
 
 #include "OptimizableTypes.h"
 #include "Thirdparty/g2o/g2o/types/EdgeGPS.h"
+#include "Thirdparty/g2o/g2o/types/EdgeYaw.h"
 
 
 namespace ORB_SLAM3
@@ -128,7 +129,7 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
         if(pKF->mnId>maxKFid)
             maxKFid=pKF->mnId;
 
-        if (pKF->HasGPS()) {
+        /*if (pKF->HasGPS()) {
             EdgeGPS* e = new EdgeGPS();
             e->setVertex(0, vSE3); // vertex index from earlier mapping
             e->setMeasurement(pKF->mGPSPositionENU);
@@ -140,6 +141,23 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
 
             optimizer.addEdge(e);
         }
+
+        if (pKF->HasYaw())
+        {
+            EdgeYaw* eYaw = new EdgeYaw();
+
+            eYaw->setVertex(0, vSE3);
+            eYaw->setMeasurement(pKF->mYawRad);
+
+            // Weak prior: sigma ≈ 20–30 degrees
+            double sigma_yaw = 20.0 * M_PI / 180.0;
+            Eigen::Matrix<double,1,1> info;
+            info(0,0) = 1.0 / (sigma_yaw * sigma_yaw);
+            eYaw->setInformation(info);
+
+            optimizer.addEdge(eYaw);
+        }*/
+
     }
 
     const float thHuber2D = sqrt(5.99);
@@ -1237,6 +1255,36 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
             maxKFid=pKFi->mnId;
         // DEBUG LBA
         pCurrentMap->msOptKFs.insert(pKFi->mnId);
+
+
+        //GPS/YAW
+        if (pKFi->HasGPS()) {
+            EdgeGPS* e = new EdgeGPS();
+            e->setVertex(0, vSE3); // vertex index from earlier mapping
+            e->setMeasurement(pKFi->mGPSPositionENU);
+            e->setInformation(pKFi->mGPSInformation);
+            // optionally set robust kernel if you like:
+            g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
+            rk->setDelta(10.0);
+            //e->setRobustKernel(rk);
+
+            optimizer.addEdge(e);
+        }
+        if (pKF->HasYaw())
+        {
+            EdgeYaw* eYaw = new EdgeYaw();
+
+            eYaw->setVertex(0, vSE3);
+            eYaw->setMeasurement(pKF->mYawRad);
+
+            // Weak prior: sigma ≈ 20–30 degrees
+            double sigma_yaw = 20.0 * M_PI / 180.0;
+            Eigen::Matrix<double,1,1> info;
+            info(0,0) = 1.0 / (sigma_yaw * sigma_yaw);
+            eYaw->setInformation(info);
+
+            optimizer.addEdge(eYaw);
+        }
     }
     num_OptKF = lLocalKeyFrames.size();
 

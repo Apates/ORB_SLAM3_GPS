@@ -1,7 +1,7 @@
 //
 // Created by luk24515 on 14.12.25.
 //
-#include "GPS/GPSManager.h"
+#include "GPS/MetadataManager.h"
 
 #include "GPS/GPSUtils.h"
 #include <fstream>
@@ -15,7 +15,7 @@
 // "2024-07-25 17:31:48.867"
 // → seconds (relative to first GPS entry)
 // -----------------------------
-double GPSManager::ParseTimestampToSeconds(const std::string& line)
+double MetadataManager::ParseTimestampToSeconds(const std::string& line)
 {
     int Y, M, D, h, m;
     double s;
@@ -31,7 +31,7 @@ double GPSManager::ParseTimestampToSeconds(const std::string& line)
 // Extract value like:
 // [latitude: 51.493723]
 // -----------------------------
-bool GPSManager::ExtractDouble(const std::string& line,
+bool MetadataManager::ExtractDouble(const std::string& line,
                                const std::string& key,
                                double& value)
 {
@@ -45,7 +45,7 @@ bool GPSManager::ExtractDouble(const std::string& line,
 }
 
 
-bool GPSManager::LoadFromSRT(const std::string& path)
+bool MetadataManager::LoadFromSRT(const std::string& path)
 {
     std::ifstream file(path);
     if (!file.is_open()) {
@@ -54,7 +54,7 @@ bool GPSManager::LoadFromSRT(const std::string& path)
     }
 
     std::vector<double> timestamps;
-    std::vector<double> lats, lons, alts;
+    std::vector<double> lats, lons, alts, yaws;
 
     std::string line;
     while (std::getline(file, line)) {
@@ -83,10 +83,15 @@ bool GPSManager::LoadFromSRT(const std::string& path)
                     continue;
             }
 
+            //yaw
+            double yaw;
+            if (!ExtractDouble(gps_block, "gb_yaw", yaw)) continue;
+
             timestamps.push_back(t);
             lats.push_back(lat);
             lons.push_back(lon);
             alts.push_back(alt);
+            yaws.push_back(yaw);
         }
     }
 
@@ -109,6 +114,7 @@ bool GPSManager::LoadFromSRT(const std::string& path)
         GPSMeasurement g;
         g.timestamp = timestamps[i] - timestamps[0];
         g.enu = GPSUtils::LatLonAltToENU(lats[i], lons[i], alts[i]);
+        g.yaw = yaws[i] * M_PI / 180.0;
         mMeasurements.push_back(g);
     }
 
@@ -122,8 +128,9 @@ bool GPSManager::LoadFromSRT(const std::string& path)
 // -----------------------------
 // Nearest-neighbor lookup
 // -----------------------------
-bool GPSManager::GetENUAtTime(double t,
+bool MetadataManager::GetMeasurementAtTime(double t,
                               Eigen::Vector3d& enu,
+                              double& yaw,
                               double max_dt) const
 {
     if (mMeasurements.empty())
@@ -160,5 +167,6 @@ bool GPSManager::GetENUAtTime(double t,
         return false;
 
     enu = best->enu;
+    yaw = best->yaw;
     return true;
 }

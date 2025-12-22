@@ -13,22 +13,23 @@
 struct GPSMeasurement
 {
     double timestamp;            // seconds (relative or UNIX, must match Frame timestamp base)
-    Eigen::Vector3d enu;         // meters (ENU)
+    Eigen::Vector3d enu;        // meters (ENU)
+    double yaw;                 // rads
 };
 
-class GPSManager
+class MetadataManager
 {
 public:
-    GPSManager() = default;
+    MetadataManager() = default;
 
     // Load and parse SRT file (returns false on failure)
     bool LoadFromSRT(const std::string& path);
 
     // Nearest-neighbor lookup
     // Returns true if a GPS measurement within max_dt seconds exists
-    bool GetENUAtTime(double t,
-                      Eigen::Vector3d& enu,
-                      double max_dt = 0.1) const;
+    bool GetMeasurementAtTime(double t,
+                              Eigen::Vector3d &enu,
+                              double &yaw, double max_dt = 0.1) const;
 
 private:
     std::vector<GPSMeasurement> mMeasurements;

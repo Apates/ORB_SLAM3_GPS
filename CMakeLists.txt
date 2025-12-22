@@ -114,8 +114,8 @@ include/Config.h
 include/Settings.h
         include/GPS/GPSUtils.h
         src/GPS/GPSUtils.cpp
-        src/GPS/GPSManager.cpp
-        include/GPS/GPSManager.h
+        src/GPS/MetadataManager.cpp
+        include/GPS/MetadataManager.h
         Examples/Monocular/mono_gps.cc)
 
 add_subdirectory(Thirdparty/g2o)

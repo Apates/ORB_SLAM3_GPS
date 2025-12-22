@@ -98,7 +98,7 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     mbInitWith3KFs = false;
     mnNumDataset = 0;
 
-    mpGPS.reset(new GPSManager());
+    mpGPS.reset(new MetadataManager());
     mpGPS->LoadFromSRT(strGPSFile);
 
 
@@ -3230,16 +3230,17 @@ void Tracking::CreateNewKeyFrame()
     if (mpGPS)
     {
         Eigen::Vector3d gps_enu;
+        double yaw;
         double t = mCurrentFrame.mTimeStamp;
 
         // Query GPS aligned to this keyframe time
-        if (mpGPS->GetENUAtTime(t, gps_enu))
+        if (mpGPS->GetMeasurementAtTime(t, gps_enu, yaw))
         {
             std::cout << "Timestamp: " << std::fixed << std::setprecision(4) << t << ", ENU: (" << gps_enu[0] <<", " << gps_enu[1] << ", " << gps_enu[2] << ")" << std::endl;
 
             // --- GPS covariance (soft constraint) ---
-            double sigma_xy = 0.5;  // meters
-            double sigma_z  = 1.0;  // meters
+            double sigma_xy = 1.0;  // meters
+            double sigma_z  = 2.0;  // meters
 
             Eigen::Matrix3d cov = Eigen::Matrix3d::Zero();
             cov(0,0) = sigma_xy * sigma_xy;
@@ -3249,6 +3250,8 @@ void Tracking::CreateNewKeyFrame()
             Eigen::Matrix3d info = cov.inverse();
 
             pKF->SetGPS(gps_enu, info);
+
+            pKF->SetYaw(yaw);
 
             /*std::cout << "[Tracking] GPS attached to KF "
                       << pKF->mnId

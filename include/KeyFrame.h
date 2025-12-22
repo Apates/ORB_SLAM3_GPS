@@ -548,6 +548,18 @@ public:
         mGPSInformation = info;
         bHasGPS = true;
     }
+
+    //Fields used for Yaw constraint
+    bool mbHasYaw = false;
+    double mYawRad = 0.0;
+    void SetYaw(double yaw_rad)
+    {
+        mYawRad = yaw_rad;
+        mbHasYaw = true;
+    }
+
+    bool HasYaw() const { return mbHasYaw; }
+
 };
 
 } //namespace ORB_SLAM
