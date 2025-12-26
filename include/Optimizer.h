@@ -47,9 +47,9 @@ class Optimizer
 {
 public:
 
-    void static BundleAdjustment(const std::vector<KeyFrame*> &vpKF, const std::vector<MapPoint*> &vpMP,
-                                 int nIterations = 5, bool *pbStopFlag=NULL, const unsigned long nLoopKF=0,
-                                 const bool bRobust = true);
+    void static BundleAdjustment(const vector<KeyFrame *> &vpKF, std::vector<ORB_SLAM3::MapPoint *> &vpMP,
+                                 int nIterations = 5, bool *pbStopFlag = NULL, unsigned long nLoopKF = 0,
+                                 bool bRobust = true);
     void static GlobalBundleAdjustemnt(Map* pMap, int nIterations=5, bool *pbStopFlag=NULL,
                                        const unsigned long nLoopKF=0, const bool bRobust = true);
     void static FullInertialBA(Map *pMap, int its, const bool bFixLocal=false, const unsigned long nLoopKF=0, bool *pbStopFlag=NULL, bool bInit=false, float priorG = 1e2, float priorA=1e6, Eigen::VectorXd *vSingVal = NULL, bool *bHess=NULL);

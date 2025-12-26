@@ -6,6 +6,10 @@
 #define ORB_SLAM3_GPSUTILS_H
 #pragma once
 #include <Eigen/Core>
+#include <vector>
+
+#include "MapPoint.h"
+#include "Thirdparty/g2o/g2o/types/sim3.h"
 
 namespace GPSUtils {
 
@@ -16,6 +20,11 @@ namespace GPSUtils {
     Eigen::Vector3d LatLonAltToENU(double lat_deg,
                                   double lon_deg,
                                   double alt_m);
+    g2o::Sim3 CalculateSim3Alignment(const std::vector<Eigen::Vector3f>& vP_slam,
+                                 const std::vector<Eigen::Vector3d>& vP_gps,
+                                 bool* success);
+
+    void TransformMapToGlobal(const g2o::Sim3& T_final, std::vector<ORB_SLAM3::MapPoint*>& vpMPs);
 
 } // namespace GPSUtils
 
