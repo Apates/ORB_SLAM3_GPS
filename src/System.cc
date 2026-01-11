@@ -188,12 +188,31 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     //Initialize the Tracking thread
     //(it will live in the main thread of execution, the one that called this constructor)
     cout << "Seq. Name: " << strSequence << endl;
+    string gpsFile = strGPSFile.c_str();
+    node = fsSettings["GPS.Activate"];
+    if (!node.empty() && (int)node == 0) {
+        gpsFile = "";
+    }
     mpTracker = new Tracking(this, mpVocabulary, mpFrameDrawer, mpMapDrawer,
-                             mpAtlas, mpKeyFrameDatabase, strSettingsFile, mSensor, settings_, strGPSFile, strSequence);
+                             mpAtlas, mpKeyFrameDatabase, strSettingsFile, mSensor, settings_, gpsFile, strSequence);
 
     //Initialize the Local Mapping thread and launch
+    node = fsSettings["GPS.HuberDelta"];
+    float huberDelta = 2.0;
+    if (node.empty()) {
+        cout << "Could not read GPS.HuberDelta from yaml. Using 2.0";
+    }else {
+        huberDelta = (float)node;
+    }
+    node = fsSettings["GPS.InfoWeight"];
+    float gpsWeight = 0.04;
+    if (node.empty()) {
+        cout << "Could not read GPS.InfoWeight from yaml. Using 0.04";
+    }else {
+        gpsWeight = (float)node;
+    }
     mpLocalMapper = new LocalMapping(this, mpAtlas, mSensor==MONOCULAR || mSensor==IMU_MONOCULAR,
-                                     mSensor==IMU_MONOCULAR || mSensor==IMU_STEREO || mSensor==IMU_RGBD, strSequence);
+                                     mSensor==IMU_MONOCULAR || mSensor==IMU_STEREO || mSensor==IMU_RGBD, strSequence, gpsWeight, huberDelta);
     mptLocalMapping = new thread(&ORB_SLAM3::LocalMapping::Run,mpLocalMapper);
     mpLocalMapper->mInitFr = initFr;
     if(settings_)
@@ -226,7 +245,9 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     //usleep(10*1000*1000);
 
     //Initialize the Viewer thread and launch
-    if(bUseViewer)
+    node = fsSettings["System.ShowViewer"];
+    bool bShowViewer = node.empty() || (int)node == 1;
+    if(bUseViewer && bShowViewer)
     //if(false) // TODO
     {
         mpViewer = new Viewer(this, mpFrameDrawer,mpMapDrawer,mpTracker,strSettingsFile,settings_);

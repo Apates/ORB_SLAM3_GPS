@@ -49,9 +49,9 @@ public:
 
     void static BundleAdjustment(const vector<KeyFrame *> &vpKF, std::vector<ORB_SLAM3::MapPoint *> &vpMP,
                                  int nIterations = 5, bool *pbStopFlag = NULL, unsigned long nLoopKF = 0,
-                                 bool bRobust = true);
+                                 bool bRobust = true, float GPSHuberDelta = 2.0f, float GPSWeight = 0.04f);
     void static GlobalBundleAdjustemnt(Map* pMap, int nIterations=5, bool *pbStopFlag=NULL,
-                                       const unsigned long nLoopKF=0, const bool bRobust = true);
+                                       const unsigned long nLoopKF=0, const bool bRobust = true, float GPSHuberDelta = 2.0f, float GPSWeight = 0.04f);
     void static FullInertialBA(Map *pMap, int its, const bool bFixLocal=false, const unsigned long nLoopKF=0, bool *pbStopFlag=NULL, bool bInit=false, float priorG = 1e2, float priorA=1e6, Eigen::VectorXd *vSingVal = NULL, bool *bHess=NULL);
 
     void static LocalBundleAdjustment(KeyFrame* pKF, bool *pbStopFlag, Map *pMap, int& num_fixedKF, int& num_OptKF, int& num_MPs, int& num_edges);

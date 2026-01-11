@@ -53,16 +53,16 @@ namespace ORB_SLAM3 {
     }
 
     void Optimizer::GlobalBundleAdjustemnt(Map *pMap, int nIterations, bool *pbStopFlag, const unsigned long nLoopKF,
-                                           const bool bRobust) {
+                                           const bool bRobust, float GPSHuberDelta, float GPSWeight) {
         vector<KeyFrame *> vpKFs = pMap->GetAllKeyFrames();
         vector<MapPoint *> vpMP = pMap->GetAllMapPoints();
-        BundleAdjustment(vpKFs, vpMP, nIterations, pbStopFlag, nLoopKF, bRobust);
+        BundleAdjustment(vpKFs, vpMP, nIterations, pbStopFlag, nLoopKF, bRobust, GPSHuberDelta, GPSWeight);
     }
 
 
     void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, std::vector<ORB_SLAM3::MapPoint *> &vpMP,
                                      int nIterations, bool *pbStopFlag, const unsigned long nLoopKF,
-                                     const bool bRobust) {
+                                     const bool bRobust, float GPSHuberDelta, float GPSWeight) {
         vector<bool> vbNotIncludedMP;
         vbNotIncludedMP.resize(vpMP.size());
 
@@ -302,15 +302,14 @@ namespace ORB_SLAM3 {
                     e->setMeasurement(gps_in_slam);
 
                     // Set the Information Matrix (Weighting)
-                    // 1.0 / (std_dev^2). Adjust based on drone GPS accuracy.
-                    double sigma_gps = 2.0; // Assume 2 meter accuracy
+                    double sigma_gps = GPSWeight;
                     Eigen::Matrix3d info = Eigen::Matrix3d::Identity() * (1.0 / (sigma_gps * sigma_gps));
                     e->setInformation(info);
 
                     // Apply Robust Kernel (Huber) to ignore outlier GPS "jumps"
                     g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
                     e->setRobustKernel(rk);
-                    rk->setDelta(2.0); // Threshold in meters
+                    rk->setDelta(GPSHuberDelta); // Threshold in meters
 
                     optimizer.addEdge(e);
                 }

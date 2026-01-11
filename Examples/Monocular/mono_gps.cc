@@ -53,6 +53,7 @@ int main(int argc, char **argv)
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     std::cout << "Creating Slam system " << endl;
     std::string gpsSRTFile = argv[4];
+
     ORB_SLAM3::System SLAM(
         argv[1],
         argv[2],
