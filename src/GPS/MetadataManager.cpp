@@ -54,7 +54,7 @@ bool MetadataManager::LoadFromSRT(const std::string& path)
     }
 
     std::vector<double> timestamps;
-    std::vector<double> lats, lons, alts, yaws;
+    std::vector<double> lats, lons, alts;
 
     std::string line;
     while (std::getline(file, line)) {
@@ -83,15 +83,10 @@ bool MetadataManager::LoadFromSRT(const std::string& path)
                     continue;
             }
 
-            //yaw
-            double yaw;
-            if (!ExtractDouble(gps_block, "gb_yaw", yaw)) continue;
-
             timestamps.push_back(t);
             lats.push_back(lat);
             lons.push_back(lon);
             alts.push_back(alt);
-            yaws.push_back(yaw);
         }
     }
 
@@ -114,13 +109,15 @@ bool MetadataManager::LoadFromSRT(const std::string& path)
         GPSMeasurement g;
         g.timestamp = timestamps[i] - timestamps[0];
         g.enu = GPSUtils::LatLonAltToENU(lats[i], lons[i], alts[i]);
-        g.yaw = yaws[i] * M_PI / 180.0;
         mMeasurements.push_back(g);
     }
 
     std::cout << "[GPSManager] Loaded "
               << mMeasurements.size()
               << " GPS measurements" << std::endl;
+    cout << "[GPSManager] Time range: "
+         << mMeasurements.front().timestamp << "s to "
+         << mMeasurements.back().timestamp << "s" << endl;
 
     return true;
 }
@@ -130,7 +127,6 @@ bool MetadataManager::LoadFromSRT(const std::string& path)
 // -----------------------------
 bool MetadataManager::GetMeasurementAtTime(double t,
                               Eigen::Vector3d& enu,
-                              double& yaw,
                               double max_dt) const
 {
     if (mMeasurements.empty())
@@ -160,13 +156,15 @@ bool MetadataManager::GetMeasurementAtTime(double t,
             }
     }
 
-    if (!best)
+    if (!best) {
+        cout << "[GPSManager] No GPSMeasurement found" << endl;
         return false;
+    }
 
-    if (std::fabs(best->timestamp - t) > max_dt)
+    if (std::fabs(best->timestamp - t) > max_dt) {
+        cout << "[GPSManager] Time difference is " << best->timestamp - t << endl;
         return false;
-
+    }
     enu = best->enu;
-    yaw = best->yaw;
     return true;
 }

@@ -33,13 +33,13 @@ void LoadImages(const string &strSequence, vector<string> &vstrImageFilenames,
 
 int main(int argc, char **argv)
 {
+    std::cout << "Starting mono_gps version 1.0..." << endl;
+
     if(argc != 5)
     {
         cerr << endl << "Usage: ./mono_gps path_to_vocabulary path_to_settings path_to_sequence path_to_srt" << endl;
         return 1;
     }
-
-    std::cout << "Starting mono_gps version 0.2..." << endl;
 
     // Retrieve paths to images
     vector<string> vstrImageFilenames;
@@ -89,6 +89,9 @@ int main(int argc, char **argv)
             cerr << endl << "Failed to load image at: " << vstrImageFilenames[ni] << endl;
             return 1;
         }
+
+        if (ni % 100 == 0)
+            cout << "Processed image " << ni << "/" << nImages << "\r" << endl;
 
         if(imageScale != 1.f)
         {
@@ -191,6 +194,8 @@ void LoadImages(const string &strPathToSequence, vector<string> &vstrImageFilena
 
     const int nTimes = vTimestamps.size();
     vstrImageFilenames.resize(nTimes);
+
+    //Check for jpg/png
 
     for(int i=0; i<nTimes; i++)
     {

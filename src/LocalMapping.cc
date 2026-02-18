@@ -44,6 +44,9 @@ LocalMapping::LocalMapping(System* pSys, Atlas *pAtlas, const float bMonocular, 
     mNumLM = 0;
     mNumKFCulling=0;
 
+    Optimizer::GPSWeight = bGPSWeight;
+    Optimizer::GPSHuberDelta = bGPSHuber;
+
 #ifdef REGISTER_TIMES
     nLBA_exec = 0;
     nLBA_abort = 0;
@@ -129,10 +132,17 @@ void LocalMapping::Run()
 
                     if (++gps_ba_counter % 20 == 0)  // every 20 KFs
                     {
-                        if (mpTracker->mpGPS)
-                        {
-                            std::cout << "[GPS] Triggering Global BA" << std::endl;
-                            Optimizer::GlobalBundleAdjustemnt(mpAtlas->GetCurrentMap(), 10, 0, 0, true, bGPSHuber, bGPSWeight);
+                        if (mpTracker->mpGPS) {
+                            std::cout << "[GPS] Triggering Transform recalculation " << std::endl;
+                            Map* pMap = mpAtlas->GetCurrentMap();
+                            vector<KeyFrame *> vpKF = pMap->GetAllKeyFrames();
+                            bool hasTransform = Optimizer::hasAlignment;
+                            Optimizer::RecalculateGpsTransformation(vpKF);
+                            vector<MapPoint *> vpMP = pMap->GetAllMapPoints();
+                            Optimizer::TransformCoordinateSystem(vpKF, vpMP);
+                            if (!hasTransform && Optimizer::hasAlignment) {
+                                Optimizer::GlobalBundleAdjustemnt(mpAtlas->GetCurrentMap(), 10, 0, 0, true);
+                            }
                         }
                     }
 
@@ -583,7 +593,7 @@ void LocalMapping::CreateNewMapPoints()
                 cosParallaxStereo2 = cos(2*atan2(pKF2->mb/2,pKF2->mvDepth[idx2]));
 
             if (bStereo1 || bStereo2) totalStereoPts++;
-            
+
             cosParallaxStereo = min(cosParallaxStereo1,cosParallaxStereo2);
 
             Eigen::Vector3f x3D;
@@ -705,7 +715,7 @@ void LocalMapping::CreateNewMapPoints()
             MapPoint* pMP = new MapPoint(x3D, mpCurrentKeyFrame, mpAtlas->GetCurrentMap());
             if (bPointStereo)
                 countStereo++;
-            
+
             pMP->AddObservation(mpCurrentKeyFrame,idx1);
             pMP->AddObservation(pKF2,idx2);
 
@@ -719,7 +729,7 @@ void LocalMapping::CreateNewMapPoints()
             mpAtlas->AddMapPoint(pMP);
             mlpRecentAddedMapPoints.push_back(pMP);
         }
-    }    
+    }
 }
 
 void LocalMapping::SearchInNeighbors()
@@ -1170,7 +1180,7 @@ bool LocalMapping::CheckFinish()
 void LocalMapping::SetFinish()
 {
     unique_lock<mutex> lock(mMutexFinish);
-    mbFinished = true;    
+    mbFinished = true;
     unique_lock<mutex> lock2(mMutexStop);
     mbStopped = true;
 }
@@ -1478,7 +1488,7 @@ void LocalMapping::ScaleRefinement()
         bInitializing=false;
         return;
     }
-    
+
     Sophus::SO3d so3wg(mRwg);
     // Before this line we are not changing the map
     unique_lock<mutex> lock(mpAtlas->GetCurrentMap()->mMutexMapUpdate);

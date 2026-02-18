@@ -41,28 +41,32 @@
 
 #include "OptimizableTypes.h"
 #include "GPS/GPSUtils.h"
-#include "Thirdparty/g2o/g2o/types/EdgeGPS.h"
 #include "Thirdparty/g2o/g2o/types/EdgeGPSUnary.h"
-#include "Thirdparty/g2o/g2o/types/EdgeSim3GPS.h"
-#include "Thirdparty/g2o/g2o/types/EdgeYaw.h"
 
 
 namespace ORB_SLAM3 {
+    double ORB_SLAM3::Optimizer::GPSWeight = 0.4f;
+    double ORB_SLAM3::Optimizer::GPSHuberDelta = 1.0f;
+    bool ORB_SLAM3::Optimizer::hasAlignment = false;
+    g2o::Sim3 ORB_SLAM3::Optimizer::T_init = g2o::Sim3();
+    g2o::Sim3 ORB_SLAM3::Optimizer::T_sim3_gps_local = g2o::Sim3();
+
+
     bool sortByVal(const pair<MapPoint *, int> &a, const pair<MapPoint *, int> &b) {
         return (a.second < b.second);
     }
 
     void Optimizer::GlobalBundleAdjustemnt(Map *pMap, int nIterations, bool *pbStopFlag, const unsigned long nLoopKF,
-                                           const bool bRobust, float GPSHuberDelta, float GPSWeight) {
+                                           const bool bRobust) {
         vector<KeyFrame *> vpKFs = pMap->GetAllKeyFrames();
         vector<MapPoint *> vpMP = pMap->GetAllMapPoints();
-        BundleAdjustment(vpKFs, vpMP, nIterations, pbStopFlag, nLoopKF, bRobust, GPSHuberDelta, GPSWeight);
+        BundleAdjustment(vpKFs, vpMP, nIterations, pbStopFlag, nLoopKF, bRobust);
     }
 
 
     void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, std::vector<ORB_SLAM3::MapPoint *> &vpMP,
                                      int nIterations, bool *pbStopFlag, const unsigned long nLoopKF,
-                                     const bool bRobust, float GPSHuberDelta, float GPSWeight) {
+                                     const bool bRobust) {
         vector<bool> vbNotIncludedMP;
         vbNotIncludedMP.resize(vpMP.size());
 
@@ -113,12 +117,6 @@ namespace ORB_SLAM3 {
         vector<MapPoint *> vpMapPointEdgeStereo;
         vpMapPointEdgeStereo.reserve(nExpectedSize);
 
-
-        // Set KeyFrame vertices
-
-        std::vector<Eigen::Vector3f> points_slam;
-        std::vector<Eigen::Vector3d> points_gps;
-
         for (size_t i = 0; i < vpKFs.size(); i++) {
             KeyFrame *pKF = vpKFs[i];
             if (pKF->isBad())
@@ -131,11 +129,6 @@ namespace ORB_SLAM3 {
             optimizer.addVertex(vSE3);
             if (pKF->mnId > maxKFid)
                 maxKFid = pKF->mnId;
-
-            if (pKF->HasGPS()) {
-                points_slam.push_back(pKF->GetCameraCenter());
-                points_gps.push_back(pKF->mGPSPositionENU);
-            }
         }
 
         const float thHuber2D = sqrt(5.99);
@@ -275,47 +268,12 @@ namespace ORB_SLAM3 {
             }
         }
 
-        std::cout << "Calculating alignment..." << std::endl;
-
-        bool hasAlignment = false;
-
-        // 1. Calculate Initial Translation Guess
-        g2o::Sim3 T_init = GPSUtils::CalculateSim3Alignment(points_slam, points_gps, &hasAlignment);
-        g2o::Sim3 T_sim3_gps_local = T_init.inverse();
 
         if (hasAlignment) {
-            std::cout << "Calculated a scale of " << T_init.scale() << std::endl;
-
             // 2. Loop through KeyFrames and add edges for those with GPS data
             for (auto pKF: vpKFs) {
-                if (pKF->HasGPS()) {
-                    g2o::VertexSE3Expmap* vKF = static_cast<g2o::VertexSE3Expmap*>(optimizer.vertex(pKF->mnId));
-
-                    // Custom Unary Edge
-                    EdgeGPSUnary* e = new EdgeGPSUnary();
-                    e->setVertex(0, vKF);
-
-                    // Transform the GPS measurement into the SLAM Local Frame
-                    Eigen::Vector3d gps_enu = pKF->mGPSPositionENU.cast<double>();
-                    Eigen::Vector3d gps_in_slam = T_sim3_gps_local.map(gps_enu);
-
-                    e->setMeasurement(gps_in_slam);
-
-                    // Set the Information Matrix (Weighting)
-                    double sigma_gps = GPSWeight;
-                    Eigen::Matrix3d info = Eigen::Matrix3d::Identity() * (1.0 / (sigma_gps * sigma_gps));
-                    e->setInformation(info);
-
-                    // Apply Robust Kernel (Huber) to ignore outlier GPS "jumps"
-                    g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
-                    e->setRobustKernel(rk);
-                    rk->setDelta(GPSHuberDelta); // Threshold in meters
-
-                    optimizer.addEdge(e);
-                }
+                AddGpsEdge(pKF, &optimizer);
             }
-
-            std::cout << "added gps edges" << endl;
 
             // Find the first KeyFrame in the optimizer (usually ID 0 or the first in the list)
             // and ensure it is NOT fixed so the whole map can shift to the GPS coordinates.
@@ -323,18 +281,13 @@ namespace ORB_SLAM3 {
                 g2o::VertexSE3Expmap *vKF = static_cast<g2o::VertexSE3Expmap *>(optimizer.vertex(pKF->mnId));
                 if (vKF) vKF->setFixed(false);
             }
-        }else {
-            std::cout << "Failed to calculate alignment." << std::endl;
         }
 
 
-
-        std::cout << "Starting optimization step" << std::endl;
         // Optimize!
         optimizer.setVerbose(false);
         optimizer.initializeOptimization();
         optimizer.optimize(nIterations);
-        std::cout << "optimization step complete" << std::endl;
         Verbose::PrintMess("BA: End of the optimization", Verbose::VERBOSITY_NORMAL);
 
         // Recover optimized data
@@ -423,43 +376,6 @@ namespace ORB_SLAM3 {
                 pMP->mPosGBA = vPoint->estimate().cast<float>();
                 pMP->mnBAGlobalForKF = nLoopKF;
             }
-        }
-
-        if (hasAlignment) {
-            std::cout << "Transforming Keyframes...";
-            g2o::Sim3 T_final = T_init;
-
-            // Iterate over all KeyFrames and "Bake" the transform
-            for (auto *pKF: vpKFs) {
-                // 1. Get current local pose (using float to match ORB-SLAM3)
-                Sophus::SE3f T_cw_f = pKF->GetPose();
-
-                // 2. Convert to double for the Global Math
-                Sophus::SE3d T_cw_local = T_cw_f.cast<double>();
-
-                // 3. Compute the Global Pose (T_wc_global = T_align * T_wc_local)
-                Sophus::SE3d T_wc_local = T_cw_local.inverse();
-
-                // Retrieve your optimized Sim3 transform
-                Eigen::Matrix3d R_final = T_final.rotation().toRotationMatrix();
-                Eigen::Vector3d t_final = T_final.translation();
-                double s_final = T_final.scale();
-
-                // Apply Sim3 to the translation and Rotation
-                // Note: Sim3 * SE3 results in a pose where scale is applied to the position
-                Eigen::Vector3d P_global = s_final * (R_final * T_wc_local.translation()) + t_final;
-                Eigen::Matrix3d R_global = R_final * T_wc_local.rotationMatrix();
-
-                // 4. Reconstruct Global Pose in Double
-                Sophus::SE3d T_wc_global(R_global, P_global);
-
-                // 5. Convert back to Float and Set Pose (ORB-SLAM3 expects T_cw)
-                pKF->SetPose(T_wc_global.inverse().cast<float>());
-            }
-
-            //Transform Map points
-            GPSUtils::TransformMapToGlobal(T_final, vpMP);
-            std::cout << "Finished Adjustmnent" << endl;
         }
     }
 
@@ -1237,34 +1153,8 @@ namespace ORB_SLAM3 {
             pCurrentMap->msOptKFs.insert(pKFi->mnId);
 
 
-            //GPS/YAW
-            /*if (pKFi->HasGPS()) {
-                EdgeGPS* e = new EdgeGPS();
-                e->setVertex(0, vSE3); // vertex index from earlier mapping
-                e->setMeasurement(pKFi->mGPSPositionENU);
-                e->setInformation(pKFi->mGPSInformation);
-                // optionally set robust kernel if you like:
-                g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
-                rk->setDelta(10.0);
-                //e->setRobustKernel(rk);
-
-                optimizer.addEdge(e);
-            }
-            if (pKF->HasYaw())
-            {
-                EdgeYaw* eYaw = new EdgeYaw();
-
-                eYaw->setVertex(0, vSE3);
-                eYaw->setMeasurement(pKF->mYawRad);
-
-                // Weak prior: sigma ≈ 20–30 degrees
-                double sigma_yaw = 20.0 * M_PI / 180.0;
-                Eigen::Matrix<double,1,1> info;
-                info(0,0) = 1.0 / (sigma_yaw * sigma_yaw);
-                eYaw->setInformation(info);
-
-                optimizer.addEdge(eYaw);
-            }*/
+            //GPS
+            AddGpsEdge(pKFi, &optimizer);
         }
         num_OptKF = lLocalKeyFrames.size();
 
@@ -3410,6 +3300,89 @@ namespace ORB_SLAM3 {
         // Recover optimized data
         scale = VS->estimate();
         Rwg = VGDir->estimate().Rwg;
+    }
+
+    void Optimizer::AddGpsEdge(KeyFrame *pKF, g2o::SparseOptimizer *optimizer) {
+        if (!pKF->HasGPS() || !hasAlignment) {
+            return;
+        }
+        g2o::VertexSE3Expmap *vKF = static_cast<g2o::VertexSE3Expmap *>(optimizer->vertex(pKF->mnId));
+
+        // Custom Unary Edge
+        EdgeGPSUnary *e = new EdgeGPSUnary();
+        e->setVertex(0, vKF);
+
+        // Transform the GPS measurement into the SLAM Local Frame
+        Eigen::Vector3d gps_enu = pKF->mGPSPositionENU.cast<double>();
+        Eigen::Vector3d gps_in_slam = T_sim3_gps_local.map(gps_enu);
+
+        e->setMeasurement(gps_in_slam);
+
+        // Set the Information Matrix (Weighting)
+        double sigma_gps = GPSWeight / T_init.scale();
+        Eigen::Matrix3d info = Eigen::Matrix3d::Identity() * (1.0 / (sigma_gps * sigma_gps));
+        e->setInformation(info);
+
+        // Apply Robust Kernel (Huber) to ignore outlier GPS "jumps"
+        g2o::RobustKernelHuber *rk = new g2o::RobustKernelHuber;
+        e->setRobustKernel(rk);
+        rk->setDelta(GPSHuberDelta / T_init.scale()); // Threshold in meters
+
+        optimizer->addEdge(e);
+    }
+
+    void Optimizer::RecalculateGpsTransformation(const vector<KeyFrame *> &vpKF) {
+        std::vector<Eigen::Vector3f> points_slam;
+        std::vector<Eigen::Vector3d> points_gps;
+        for (size_t i = 0; i < vpKF.size(); i++) {
+            KeyFrame *pKF = vpKF[i];
+            if (pKF->HasGPS()) {
+                points_slam.push_back(pKF->GetCameraCenter());
+                points_gps.push_back(pKF->mGPSPositionENU);
+            }
+        }
+        bool succ = false;
+        g2o::Sim3 res = GPSUtils::CalculateSim3Alignment(points_slam, points_gps, &succ);
+        if (succ) {
+            T_init = res;
+            T_sim3_gps_local = T_init.inverse();
+            hasAlignment = true;
+            cout << "Recalculated GPS Transformation: scale: " << T_init.scale() << endl;
+        }
+    }
+
+    void Optimizer::TransformCoordinateSystem(const vector<KeyFrame *> &vpKF,
+                                              std::vector<ORB_SLAM3::MapPoint *> &vpMP) {
+        // Iterate over all KeyFrames and "Bake" the transform
+        for (auto *pKF: vpKF) {
+            // 1. Get current local pose (using float to match ORB-SLAM3)
+            Sophus::SE3f T_cw_f = pKF->GetPose();
+
+            // 2. Convert to double for the Global Math
+            Sophus::SE3d T_cw_local = T_cw_f.cast<double>();
+
+            // 3. Compute the Global Pose (T_wc_global = T_align * T_wc_local)
+            Sophus::SE3d T_wc_local = T_cw_local.inverse();
+
+            // Retrieve your optimized Sim3 transform
+            Eigen::Matrix3d R_final = T_init.rotation().toRotationMatrix();
+            Eigen::Vector3d t_final = T_init.translation();
+            double s_final = T_init.scale();
+
+            // Apply Sim3 to the translation and Rotation
+            // Note: Sim3 * SE3 results in a pose where scale is applied to the position
+            Eigen::Vector3d P_global = s_final * (R_final * T_wc_local.translation()) + t_final;
+            Eigen::Matrix3d R_global = R_final * T_wc_local.rotationMatrix();
+
+            // 4. Reconstruct Global Pose in Double
+            Sophus::SE3d T_wc_global(R_global, P_global);
+
+            // 5. Convert back to Float and Set Pose (ORB-SLAM3 expects T_cw)
+            pKF->SetPose(T_wc_global.inverse().cast<float>());
+        }
+
+        //Transform Map points
+        GPSUtils::TransformMapToGlobal(T_init, vpMP);
     }
 
     void Optimizer::LocalBundleAdjustment(KeyFrame *pMainKF, vector<KeyFrame *> vpAdjustKF,

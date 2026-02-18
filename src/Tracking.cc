@@ -2581,6 +2581,7 @@ void Tracking::CreateInitialMapMonocular()
 
     // Bundle Adjustment
     Verbose::PrintMess("New Map created with " + to_string(mpAtlas->MapPointsInMap()) + " points", Verbose::VERBOSITY_QUIET);
+    Optimizer::hasAlignment = false;
     Optimizer::GlobalBundleAdjustemnt(mpAtlas->GetCurrentMap(),20);
 
     float medianDepth = pKFini->ComputeSceneMedianDepth(2);
@@ -3230,14 +3231,11 @@ void Tracking::CreateNewKeyFrame()
     if (mpGPS)
     {
         Eigen::Vector3d gps_enu;
-        double yaw;
         double t = mCurrentFrame.mTimeStamp;
 
         // Query GPS aligned to this keyframe time
-        if (mpGPS->GetMeasurementAtTime(t, gps_enu, yaw))
+        if (mpGPS->GetMeasurementAtTime(t, gps_enu))
         {
-            std::cout << "Timestamp: " << std::fixed << std::setprecision(4) << t << ", ENU: (" << gps_enu[0] <<", " << gps_enu[1] << ", " << gps_enu[2] << ")" << std::endl;
-
             // --- GPS covariance (soft constraint) ---
             double sigma_xy = 1.0;  // meters
             double sigma_z  = 2.0;  // meters
@@ -3250,8 +3248,6 @@ void Tracking::CreateNewKeyFrame()
             Eigen::Matrix3d info = cov.inverse();
 
             pKF->SetGPS(gps_enu, info);
-
-            pKF->SetYaw(yaw);
 
             /*std::cout << "[Tracking] GPS attached to KF "
                       << pKF->mnId

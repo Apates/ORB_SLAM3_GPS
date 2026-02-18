@@ -196,6 +196,11 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mpTracker = new Tracking(this, mpVocabulary, mpFrameDrawer, mpMapDrawer,
                              mpAtlas, mpKeyFrameDatabase, strSettingsFile, mSensor, settings_, gpsFile, strSequence);
 
+    node = fsSettings["GPS.Activate"];
+    if (!node.empty() && (int)node == 0) {
+        gpsFile = "";
+    }
+
     //Initialize the Local Mapping thread and launch
     node = fsSettings["GPS.HuberDelta"];
     float huberDelta = 2.0;

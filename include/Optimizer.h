@@ -49,9 +49,9 @@ public:
 
     void static BundleAdjustment(const vector<KeyFrame *> &vpKF, std::vector<ORB_SLAM3::MapPoint *> &vpMP,
                                  int nIterations = 5, bool *pbStopFlag = NULL, unsigned long nLoopKF = 0,
-                                 bool bRobust = true, float GPSHuberDelta = 2.0f, float GPSWeight = 0.04f);
+                                 bool bRobust = true);
     void static GlobalBundleAdjustemnt(Map* pMap, int nIterations=5, bool *pbStopFlag=NULL,
-                                       const unsigned long nLoopKF=0, const bool bRobust = true, float GPSHuberDelta = 2.0f, float GPSWeight = 0.04f);
+                                       const unsigned long nLoopKF=0, const bool bRobust = true);
     void static FullInertialBA(Map *pMap, int its, const bool bFixLocal=false, const unsigned long nLoopKF=0, bool *pbStopFlag=NULL, bool bInit=false, float priorG = 1e2, float priorA=1e6, Eigen::VectorXd *vSingVal = NULL, bool *bHess=NULL);
 
     void static LocalBundleAdjustment(KeyFrame* pKF, bool *pbStopFlag, Map *pMap, int& num_fixedKF, int& num_OptKF, int& num_MPs, int& num_edges);
@@ -97,6 +97,18 @@ public:
     void static InertialOptimization(Map *pMap, Eigen::Matrix3d &Rwg, double &scale, Eigen::Vector3d &bg, Eigen::Vector3d &ba, bool bMono, Eigen::MatrixXd  &covInertial, bool bFixedVel=false, bool bGauss=false, float priorG = 1e2, float priorA = 1e6);
     void static InertialOptimization(Map *pMap, Eigen::Vector3d &bg, Eigen::Vector3d &ba, float priorG = 1e2, float priorA = 1e6);
     void static InertialOptimization(Map *pMap, Eigen::Matrix3d &Rwg, double &scale);
+
+    static g2o::Sim3 T_sim3_gps_local;
+    static g2o::Sim3 T_init;
+
+    static double GPSWeight;
+    static double GPSHuberDelta;
+
+    static bool hasAlignment;
+
+    void static AddGpsEdge(KeyFrame *pKF, g2o::SparseOptimizer *optimizer);
+    void static RecalculateGpsTransformation(const vector<KeyFrame *> &vpKF);
+    void static TransformCoordinateSystem(const vector<KeyFrame *> &vpKF, std::vector<ORB_SLAM3::MapPoint *> &vpMP);
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };

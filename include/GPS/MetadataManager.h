@@ -14,7 +14,6 @@ struct GPSMeasurement
 {
     double timestamp;            // seconds (relative or UNIX, must match Frame timestamp base)
     Eigen::Vector3d enu;        // meters (ENU)
-    double yaw;                 // rads
 };
 
 class MetadataManager
@@ -29,7 +28,7 @@ public:
     // Returns true if a GPS measurement within max_dt seconds exists
     bool GetMeasurementAtTime(double t,
                               Eigen::Vector3d &enu,
-                              double &yaw, double max_dt = 0.1) const;
+                              double max_dt = 0.1) const;
 
 private:
     std::vector<GPSMeasurement> mMeasurements;
