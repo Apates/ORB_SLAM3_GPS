@@ -108,7 +108,7 @@ public:
 
     void static AddGpsEdge(KeyFrame *pKF, g2o::SparseOptimizer *optimizer);
     void static RecalculateGpsTransformation(const vector<KeyFrame *> &vpKF);
-    void static TransformCoordinateSystem(const vector<KeyFrame *> &vpKF, std::vector<ORB_SLAM3::MapPoint *> &vpMP);
+    void static TransformCoordinateSystem(std::vector<ORB_SLAM3::KeyFrame *> &vpKF, std::vector<ORB_SLAM3::MapPoint *> &vpMP);
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };

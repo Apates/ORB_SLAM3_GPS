@@ -33,6 +33,9 @@
 #include <boost/archive/xml_iarchive.hpp>
 #include <boost/archive/xml_oarchive.hpp>
 
+#include "Optimizer.h"
+#include "GPS/GPSUtils.h"
+
 namespace ORB_SLAM3
 {
 
@@ -657,32 +660,17 @@ void System::SaveKeyFrameTrajectoryTUM(const string &filename)
     cout << endl << "Saving keyframe trajectory to " << filename << " ..." << endl;
 
     vector<KeyFrame*> vpKFs = mpAtlas->GetAllKeyFrames();
-    sort(vpKFs.begin(),vpKFs.end(),KeyFrame::lId);
+    SaveKeyFramesTUM(vpKFs, filename);
 
-    // Transform all keyframes so that the first keyframe is at the origin.
-    // After a loop closure the first keyframe might not be at the origin.
-    ofstream f;
-    f.open(filename.c_str());
-    f << fixed;
 
-    for(size_t i=0; i<vpKFs.size(); i++)
-    {
-        KeyFrame* pKF = vpKFs[i];
-
-       // pKF->SetPose(pKF->GetPose()*Two);
-
-        if(pKF->isBad())
-            continue;
-
-        Sophus::SE3f Twc = pKF->GetPoseInverse();
-        Eigen::Quaternionf q = Twc.unit_quaternion();
-        Eigen::Vector3f t = Twc.translation();
-        f << setprecision(6) << pKF->mTimeStamp << setprecision(7) << " " << t(0) << " " << t(1) << " " << t(2)
-          << " " << q.x() << " " << q.y() << " " << q.z() << " " << q.w() << endl;
-
-    }
-
-    f.close();
+    /*vector<Map *> maps = mpAtlas->GetAllMaps();
+    cout << "There are " << maps.size() << " maps in the atlas. Saving additional maps" << endl;
+    for (int i = 0; i < maps.size() - 1; i++) {
+        vpKFs = maps[i]->GetAllKeyFrames();
+        //concat _old_i to filename
+        string filename_i = filename.substr(0, filename.find_last_of('.')) + "_map" + to_string(i) + filename.substr(filename.find_last_of('.'));
+        SaveKeyFramesTUM(vpKFs, filename_i);
+    }*/
 }
 
 void System::SaveTrajectoryEuRoC(const string &filename)
@@ -1135,6 +1123,41 @@ void System::SaveKeyFrameTrajectoryEuRoC(const string &filename)
             f << setprecision(6) << 1e9*pKF->mTimeStamp << " " <<  setprecision(9) << t(0) << " " << t(1) << " " << t(2) << " " << q.x() << " " << q.y() << " " << q.z() << " " << q.w() << endl;
         }
     }
+    f.close();
+}
+
+void System::SaveKeyFramesTUM(std::vector<KeyFrame *> vpKFs, const string &filename) {
+    cout << "Saving Tum to " << filename << " ..." << endl;
+
+    if (Optimizer::hasAlignment) {
+        GPSUtils::TransformKeyframesToGlobal(Optimizer::T_init, vpKFs);
+    }
+
+    sort(vpKFs.begin(),vpKFs.end(),KeyFrame::lId);
+
+    // Transform all keyframes so that the first keyframe is at the origin.
+    // After a loop closure the first keyframe might not be at the origin.
+    ofstream f;
+    f.open(filename.c_str());
+    f << fixed;
+
+    for(size_t i=0; i<vpKFs.size(); i++)
+    {
+        KeyFrame* pKF = vpKFs[i];
+
+        // pKF->SetPose(pKF->GetPose()*Two);
+
+        if(pKF->isBad())
+            continue;
+
+        Sophus::SE3f Twc = pKF->GetPoseInverse();
+        Eigen::Quaternionf q = Twc.unit_quaternion();
+        Eigen::Vector3f t = Twc.translation();
+        f << setprecision(6) << pKF->mTimeStamp << setprecision(7) << " " << t(0) << " " << t(1) << " " << t(2)
+          << " " << q.x() << " " << q.y() << " " << q.z() << " " << q.w() << endl;
+
+    }
+
     f.close();
 }
 

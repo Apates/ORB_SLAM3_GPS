@@ -33,7 +33,7 @@ void LoadImages(const string &strSequence, vector<string> &vstrImageFilenames,
 
 int main(int argc, char **argv)
 {
-    std::cout << "Starting mono_gps version 1.0..." << endl;
+    std::cout << "Starting mono_gps version 1.1..." << endl;
 
     if(argc != 5)
     {

@@ -1154,7 +1154,7 @@ namespace ORB_SLAM3 {
 
 
             //GPS
-            AddGpsEdge(pKFi, &optimizer);
+            //AddGpsEdge(pKFi, &optimizer);
         }
         num_OptKF = lLocalKeyFrames.size();
 
@@ -3319,7 +3319,7 @@ namespace ORB_SLAM3 {
         e->setMeasurement(gps_in_slam);
 
         // Set the Information Matrix (Weighting)
-        double sigma_gps = GPSWeight / T_init.scale();
+        double sigma_gps = GPSWeight / T_init.scale(); // Adjust GPS weight based on current scale
         Eigen::Matrix3d info = Eigen::Matrix3d::Identity() * (1.0 / (sigma_gps * sigma_gps));
         e->setInformation(info);
 
@@ -3351,35 +3351,10 @@ namespace ORB_SLAM3 {
         }
     }
 
-    void Optimizer::TransformCoordinateSystem(const vector<KeyFrame *> &vpKF,
+    void Optimizer::TransformCoordinateSystem(std::vector<ORB_SLAM3::KeyFrame *> &vpKF,
                                               std::vector<ORB_SLAM3::MapPoint *> &vpMP) {
         // Iterate over all KeyFrames and "Bake" the transform
-        for (auto *pKF: vpKF) {
-            // 1. Get current local pose (using float to match ORB-SLAM3)
-            Sophus::SE3f T_cw_f = pKF->GetPose();
-
-            // 2. Convert to double for the Global Math
-            Sophus::SE3d T_cw_local = T_cw_f.cast<double>();
-
-            // 3. Compute the Global Pose (T_wc_global = T_align * T_wc_local)
-            Sophus::SE3d T_wc_local = T_cw_local.inverse();
-
-            // Retrieve your optimized Sim3 transform
-            Eigen::Matrix3d R_final = T_init.rotation().toRotationMatrix();
-            Eigen::Vector3d t_final = T_init.translation();
-            double s_final = T_init.scale();
-
-            // Apply Sim3 to the translation and Rotation
-            // Note: Sim3 * SE3 results in a pose where scale is applied to the position
-            Eigen::Vector3d P_global = s_final * (R_final * T_wc_local.translation()) + t_final;
-            Eigen::Matrix3d R_global = R_final * T_wc_local.rotationMatrix();
-
-            // 4. Reconstruct Global Pose in Double
-            Sophus::SE3d T_wc_global(R_global, P_global);
-
-            // 5. Convert back to Float and Set Pose (ORB-SLAM3 expects T_cw)
-            pKF->SetPose(T_wc_global.inverse().cast<float>());
-        }
+        GPSUtils::TransformKeyframesToGlobal(T_init, vpKF);
 
         //Transform Map points
         GPSUtils::TransformMapToGlobal(T_init, vpMP);

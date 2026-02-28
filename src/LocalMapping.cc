@@ -133,16 +133,16 @@ void LocalMapping::Run()
                     if (++gps_ba_counter % 20 == 0)  // every 20 KFs
                     {
                         if (mpTracker->mpGPS) {
-                            std::cout << "[GPS] Triggering Transform recalculation " << std::endl;
-                            Map* pMap = mpAtlas->GetCurrentMap();
-                            vector<KeyFrame *> vpKF = pMap->GetAllKeyFrames();
-                            bool hasTransform = Optimizer::hasAlignment;
-                            Optimizer::RecalculateGpsTransformation(vpKF);
-                            vector<MapPoint *> vpMP = pMap->GetAllMapPoints();
-                            Optimizer::TransformCoordinateSystem(vpKF, vpMP);
-                            if (!hasTransform && Optimizer::hasAlignment) {
-                                Optimizer::GlobalBundleAdjustemnt(mpAtlas->GetCurrentMap(), 10, 0, 0, true);
-                            }
+                            //if (!Optimizer::hasAlignment && mpAtlas->KeyFramesInMap() > 50) {
+                                std::cout << "[GPS] Triggering Transform recalculation " << std::endl;
+                                Map* pMap = mpAtlas->GetCurrentMap();
+                                vector<KeyFrame *> vpKF = pMap->GetAllKeyFrames();
+                                Optimizer::RecalculateGpsTransformation(vpKF);
+                                //Optimizer::GlobalBundleAdjustemnt(pMap, 10, 0, 0, true);
+                            //}
+                            //vector<MapPoint *> vpMP = pMap->GetAllMapPoints();
+                            //Optimizer::GlobalBundleAdjustemnt(pMap, 10, 0, 0, true);
+                            //Optimizer::TransformCoordinateSystem(vpKF, vpMP);
                         }
                     }
 

@@ -26,6 +26,8 @@ namespace GPSUtils {
 
     void TransformMapToGlobal(const g2o::Sim3& T_final, std::vector<ORB_SLAM3::MapPoint*>& vpMPs);
 
+    void TransformKeyframesToGlobal(const g2o::Sim3& T_final, std::vector<ORB_SLAM3::KeyFrame*>& vpKFs);
+
 } // namespace GPSUtils
 
 #endif //ORB_SLAM3_GPSUTILS_H
