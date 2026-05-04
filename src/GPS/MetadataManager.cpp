@@ -10,11 +10,9 @@
 #include <regex>
 #include <cmath>
 
-// -----------------------------
 // Timestamp parsing
 // "2024-07-25 17:31:48.867"
 // → seconds (relative to first GPS entry)
-// -----------------------------
 double MetadataManager::ParseTimestampToSeconds(const std::string& line)
 {
     int Y, M, D, h, m;
@@ -27,10 +25,8 @@ double MetadataManager::ParseTimestampToSeconds(const std::string& line)
     return h * 3600.0 + m * 60.0 + s;
 }
 
-// -----------------------------
 // Extract value like:
 // [latitude: 51.493723]
-// -----------------------------
 bool MetadataManager::ExtractDouble(const std::string& line,
                                const std::string& key,
                                double& value)
@@ -122,9 +118,7 @@ bool MetadataManager::LoadFromSRT(const std::string& path)
     return true;
 }
 
-// -----------------------------
 // Nearest-neighbor lookup
-// -----------------------------
 bool MetadataManager::GetMeasurementAtTime(double t,
                               Eigen::Vector3d& enu,
                               double max_dt) const

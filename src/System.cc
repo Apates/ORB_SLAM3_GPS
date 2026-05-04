@@ -199,28 +199,50 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mpTracker = new Tracking(this, mpVocabulary, mpFrameDrawer, mpMapDrawer,
                              mpAtlas, mpKeyFrameDatabase, strSettingsFile, mSensor, settings_, gpsFile, strSequence);
 
-    node = fsSettings["GPS.Activate"];
-    if (!node.empty() && (int)node == 0) {
-        gpsFile = "";
-    }
-
     //Initialize the Local Mapping thread and launch
+    MetadataOptimizerSettings metadataOptimizerSettings;
     node = fsSettings["GPS.HuberDelta"];
-    float huberDelta = 2.0;
     if (node.empty()) {
-        cout << "Could not read GPS.HuberDelta from yaml. Using 2.0";
+        cout << "Could not read GPS.HuberDelta from yaml. Using 1.0";
     }else {
-        huberDelta = (float)node;
+        metadataOptimizerSettings.GPSHuberDelta = (float)node;
     }
     node = fsSettings["GPS.InfoWeight"];
-    float gpsWeight = 0.04;
     if (node.empty()) {
         cout << "Could not read GPS.InfoWeight from yaml. Using 0.04";
     }else {
-        gpsWeight = (float)node;
+        metadataOptimizerSettings.GPSWeight = (float)node;
     }
+    node = fsSettings["GPS.GlobalInclude"];
+    if (node.empty()) {
+        cout << "Could not read GPS.GlobalInclude from yaml. Using false";
+    }else {
+        metadataOptimizerSettings.GlobalGPS = (float)node;
+    }
+
+    node = fsSettings["GPS.LocalInclude"];
+    if (node.empty()) {
+        cout << "Could not read GPS.LocalInclude from yaml. Using false";
+    }else {
+        metadataOptimizerSettings.LocalGPS = (float)node;
+    }
+
+    node = fsSettings["GPS.PeriodicBA"];
+    if (node.empty()) {
+        cout << "Could not read GPS.PeriodicBA from yaml. Using false";
+    }else {
+        metadataOptimizerSettings.PeriodicGlobalBA = (float)node;
+    }
+
+    node = fsSettings["GPS.TransformToENU"];
+    if (node.empty()) {
+        cout << "Could not read GPS.TransformToENU from yaml. Using false";
+    }else {
+        metadataOptimizerSettings.TransformToENU = (float)node;
+    }
+
     mpLocalMapper = new LocalMapping(this, mpAtlas, mSensor==MONOCULAR || mSensor==IMU_MONOCULAR,
-                                     mSensor==IMU_MONOCULAR || mSensor==IMU_STEREO || mSensor==IMU_RGBD, strSequence, gpsWeight, huberDelta);
+                                     mSensor==IMU_MONOCULAR || mSensor==IMU_STEREO || mSensor==IMU_RGBD, strSequence, metadataOptimizerSettings);
     mptLocalMapping = new thread(&ORB_SLAM3::LocalMapping::Run,mpLocalMapper);
     mpLocalMapper->mInitFr = initFr;
     if(settings_)

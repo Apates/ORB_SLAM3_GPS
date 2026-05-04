@@ -104,6 +104,9 @@ public:
     static double GPSWeight;
     static double GPSHuberDelta;
 
+    static bool GPSGlobal;
+    static bool GPSLocal;
+
     static bool hasAlignment;
 
     void static AddGpsEdge(KeyFrame *pKF, g2o::SparseOptimizer *optimizer);

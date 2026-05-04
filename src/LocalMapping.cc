@@ -27,12 +27,14 @@
 #include<mutex>
 #include<chrono>
 
+#include "GPS/MetadataOptimizerSettings.h"
+
 namespace ORB_SLAM3
 {
 
-LocalMapping::LocalMapping(System* pSys, Atlas *pAtlas, const float bMonocular, bool bInertial, const string &_strSeqName, const float bGPSWeight, const float bGPSHuber):
+LocalMapping::LocalMapping(System* pSys, Atlas *pAtlas, const float bMonocular, bool bInertial, const string &_strSeqName, const MetadataOptimizerSettings &metadataOptimizerSettings):
     mpSystem(pSys), mbMonocular(bMonocular), mbInertial(bInertial), mbResetRequested(false), mbResetRequestedActiveMap(false), mbFinishRequested(false), mbFinished(true), mpAtlas(pAtlas), bInitializing(false),
-    mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbNotStop(false), mbAcceptKeyFrames(true), bGPSWeight(bGPSWeight), bGPSHuber(bGPSHuber),
+    mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbNotStop(false), mbAcceptKeyFrames(true), bMOptimizerSettings(metadataOptimizerSettings),
     mIdxInit(0), mScale(1.0), mInitSect(0), mbNotBA1(true), mbNotBA2(true), mIdxIteration(0), infoInertial(Eigen::MatrixXd::Zero(9,9))
 {
     mnMatchesInliers = 0;
@@ -44,8 +46,10 @@ LocalMapping::LocalMapping(System* pSys, Atlas *pAtlas, const float bMonocular, 
     mNumLM = 0;
     mNumKFCulling=0;
 
-    Optimizer::GPSWeight = bGPSWeight;
-    Optimizer::GPSHuberDelta = bGPSHuber;
+    Optimizer::GPSWeight = bMOptimizerSettings.GPSWeight;
+    Optimizer::GPSHuberDelta = bMOptimizerSettings.GPSHuberDelta;
+    Optimizer::GPSGlobal = bMOptimizerSettings.GlobalGPS;
+    Optimizer::GPSLocal = bMOptimizerSettings.LocalGPS;
 
 #ifdef REGISTER_TIMES
     nLBA_exec = 0;
@@ -133,16 +137,17 @@ void LocalMapping::Run()
                     if (++gps_ba_counter % 20 == 0)  // every 20 KFs
                     {
                         if (mpTracker->mpGPS) {
-                            //if (!Optimizer::hasAlignment && mpAtlas->KeyFramesInMap() > 50) {
-                                std::cout << "[GPS] Triggering Transform recalculation " << std::endl;
-                                Map* pMap = mpAtlas->GetCurrentMap();
-                                vector<KeyFrame *> vpKF = pMap->GetAllKeyFrames();
-                                Optimizer::RecalculateGpsTransformation(vpKF);
-                                //Optimizer::GlobalBundleAdjustemnt(pMap, 10, 0, 0, true);
-                            //}
-                            //vector<MapPoint *> vpMP = pMap->GetAllMapPoints();
-                            //Optimizer::GlobalBundleAdjustemnt(pMap, 10, 0, 0, true);
-                            //Optimizer::TransformCoordinateSystem(vpKF, vpMP);
+                            std::cout << "[GPS] Triggering Transform recalculation " << std::endl;
+                            Map* pMap = mpAtlas->GetCurrentMap();
+                            vector<KeyFrame *> vpKF = pMap->GetAllKeyFrames();
+                            Optimizer::RecalculateGpsTransformation(vpKF);
+                            vector<MapPoint *> vpMP = pMap->GetAllMapPoints();
+                            if (bMOptimizerSettings.PeriodicGlobalBA) {
+                                Optimizer::GlobalBundleAdjustemnt(pMap, 10, 0, 0, true);
+                            }
+                            if (bMOptimizerSettings.TransformToENU) {
+                                Optimizer::TransformCoordinateSystem(vpKF, vpMP);
+                            }
                         }
                     }
 

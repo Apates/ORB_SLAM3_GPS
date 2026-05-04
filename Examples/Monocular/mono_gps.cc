@@ -21,6 +21,7 @@
 #include<fstream>
 #include<chrono>
 #include<iomanip>
+#include<string>
 
 #include<opencv2/core/core.hpp>
 
@@ -29,7 +30,7 @@
 using namespace std;
 
 void LoadImages(const string &strSequence, vector<string> &vstrImageFilenames,
-                vector<double> &vTimestamps);
+                vector<double> &vTimestamps, const string &imgFormat);
 
 int main(int argc, char **argv)
 {
@@ -41,11 +42,28 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    //Check settings file
+    cv::FileStorage fsSettings(argv[2], cv::FileStorage::READ);
+    if(!fsSettings.isOpened())
+    {
+        cerr << "Failed to open settings file at: " << argv[2] << endl;
+        exit(-1);
+    }
+
+    string img = "png";
+    cv::FileNode node = fsSettings["System.ImageFormat"];
+    if (node.empty()) {
+        cout << "Could not read System.ImageFormat from yaml. Using png";
+    }else {
+        img = static_cast<string>(node);
+    }
+
+
     // Retrieve paths to images
     vector<string> vstrImageFilenames;
     vector<double> vTimestamps;
     std::cout << "Trying to open \"" << argv[3] << "\"" << endl;
-    LoadImages(string(argv[3]), vstrImageFilenames, vTimestamps);
+    LoadImages(string(argv[3]), vstrImageFilenames, vTimestamps, img);
 
     int nImages = vstrImageFilenames.size();
     std::cout << "Retrieved " << nImages << "Images" << endl;
@@ -63,6 +81,8 @@ int main(int argc, char **argv)
         "",
         gpsSRTFile);
     std::cout << "Finished creating Slam system " << endl;
+
+
     float imageScale = SLAM.GetImageScale();
 
     // Vector for tracking time statistics
@@ -171,7 +191,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
-void LoadImages(const string &strPathToSequence, vector<string> &vstrImageFilenames, vector<double> &vTimestamps)
+void LoadImages(const string &strPathToSequence, vector<string> &vstrImageFilenames, vector<double> &vTimestamps, const string &imgFormat)
 {
     ifstream fTimes;
     string strPathTimeFile = strPathToSequence + "/times.txt";
@@ -201,6 +221,6 @@ void LoadImages(const string &strPathToSequence, vector<string> &vstrImageFilena
     {
         stringstream ss;
         ss << setfill('0') << setw(6) << i;
-        vstrImageFilenames[i] = strPrefixLeft + ss.str() + ".png";
+        vstrImageFilenames[i] = strPrefixLeft + ss.str() + "." + imgFormat;
     }
 }

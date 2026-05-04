@@ -1,5 +1,6 @@
 #!/bin/bash
-./Examples/Monocular/mono_kitti \
+./Examples/Monocular/mono_gps \
     Vocabulary/ORBvoc.txt \
-    Examples/Monocular/juicy.yaml \
-    /home/luk24515/BA/Data/Einzelbilder/DJI_20240725173148_0001_V/images
+    /home/luk24515/BA/Data/JuicyBeats2/720pGps.yaml \
+    /home/luk24515/BA/Data/JuicyBeats2/01 \
+    /home/luk24515/BA/Data/JuicyBeats2/01/Data.SRT

@@ -99,7 +99,9 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     mnNumDataset = 0;
 
     mpGPS.reset(new MetadataManager());
-    mpGPS->LoadFromSRT(strGPSFile);
+    if (strGPSFile != "") {
+        mpGPS->LoadFromSRT(strGPSFile);
+    }
 
 
     vector<GeometricCamera*> vpCams = mpAtlas->GetAllCameras();

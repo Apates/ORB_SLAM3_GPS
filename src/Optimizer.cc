@@ -47,6 +47,8 @@
 namespace ORB_SLAM3 {
     double ORB_SLAM3::Optimizer::GPSWeight = 0.4f;
     double ORB_SLAM3::Optimizer::GPSHuberDelta = 1.0f;
+    bool ORB_SLAM3::Optimizer::GPSGlobal = false;
+    bool ORB_SLAM3::Optimizer::GPSLocal = true;
     bool ORB_SLAM3::Optimizer::hasAlignment = false;
     g2o::Sim3 ORB_SLAM3::Optimizer::T_init = g2o::Sim3();
     g2o::Sim3 ORB_SLAM3::Optimizer::T_sim3_gps_local = g2o::Sim3();
@@ -269,7 +271,7 @@ namespace ORB_SLAM3 {
         }
 
 
-        if (hasAlignment) {
+        if (hasAlignment && GPSGlobal) {
             // 2. Loop through KeyFrames and add edges for those with GPS data
             for (auto pKF: vpKFs) {
                 AddGpsEdge(pKF, &optimizer);
@@ -1154,7 +1156,9 @@ namespace ORB_SLAM3 {
 
 
             //GPS
-            //AddGpsEdge(pKFi, &optimizer);
+            if (GPSLocal) {
+                AddGpsEdge(pKFi, &optimizer);
+            }
         }
         num_OptKF = lLocalKeyFrames.size();
 

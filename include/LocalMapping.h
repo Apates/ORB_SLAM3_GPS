@@ -29,6 +29,8 @@
 
 #include <mutex>
 
+#include "GPS/MetadataOptimizerSettings.h"
+
 
 namespace ORB_SLAM3
 {
@@ -42,7 +44,7 @@ class LocalMapping
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    LocalMapping(System* pSys, Atlas* pAtlas, const float bMonocular, bool bInertial, const string &_strSeqName=std::string(), const float bGPSWeight = 0.04, const float bGPSHuber = 2.0);
+    LocalMapping(System* pSys, Atlas* pAtlas, const float bMonocular, bool bInertial, const string &_strSeqName=std::string(), const MetadataOptimizerSettings &metadataOptimizerSettings = MetadataOptimizerSettings());
 
     void SetLoopCloser(LoopClosing* pLoopCloser);
 
@@ -111,8 +113,7 @@ public:
     bool mbFarPoints;
     float mThFarPoints;
 
-    float bGPSWeight;
-    float bGPSHuber;
+    MetadataOptimizerSettings bMOptimizerSettings;
 
 #ifdef REGISTER_TIMES
     vector<double> vdKFInsert_ms;

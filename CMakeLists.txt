@@ -116,7 +116,10 @@ include/Settings.h
         src/GPS/GPSUtils.cpp
         src/GPS/MetadataManager.cpp
         include/GPS/MetadataManager.h
-        Examples/Monocular/mono_gps.cc)
+        Examples/Monocular/mono_gps.cc
+        src/GPS/MetadataOptimizerSettings.cpp
+        include/GPS/MetadataOptimizerSettings.h
+)
 
 add_subdirectory(Thirdparty/g2o)
 
